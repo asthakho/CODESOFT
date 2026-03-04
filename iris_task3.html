@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iris Classifier</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR LAYOUT ── */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px;
+  background: #16213e;
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.logo { text-align: center; margin-bottom: 24px; }
+.logo .flower { font-size: 2.4rem; }
+.logo h2 { font-size: 1rem; font-weight: 800; color: #e0e0e0; margin-top: 6px; }
+.logo p  { font-size: 0.7rem; color: #7f8c8d; margin-top: 3px; }
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #7f8c8d;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all .2s;
+  width: 100%;
+}
+.nav-btn:hover  { background: #0f3460; color: #e0e0e0; }
+.nav-btn.active { background: #e94560; color: white; }
+.nav-btn .ico   { font-size: 1.1rem; width: 22px; text-align: center; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 0.65rem;
+  color: #4a5568;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── MAIN CONTENT ── */
+.main { flex: 1; padding: 32px 28px; overflow-y: auto; }
+
+.section { display: none; animation: fadeIn .3s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.page-sub {
+  font-size: 0.82rem;
+  color: #7f8c8d;
+  margin-bottom: 28px;
+}
+
+/* ── STAT PILLS ── */
+.pills { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+.pill {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 50px;
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pill .p-val { font-size: 1.3rem; font-weight: 800; color: #e94560; }
+.pill .p-lbl { font-size: 0.72rem; color: #7f8c8d; font-weight: 600; }
+
+/* ── SPECIES FLIP CARDS ── */
+.flip-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-bottom: 32px; }
+@media(max-width:640px){ .flip-row { grid-template-columns: 1fr; } }
+
+.flip-card { height: 220px; perspective: 1000px; cursor: pointer; }
+.flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .6s cubic-bezier(.4,.2,.2,1);
+}
+.flip-card:hover .flip-inner { transform: rotateY(180deg); }
+.flip-front, .flip-back {
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.flip-front {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  text-align: center;
+}
+.flip-back {
+  background: #e94560;
+  transform: rotateY(180deg);
+  text-align: left;
+  justify-content: flex-start;
+  padding: 18px 20px;
+}
+.flip-front.setosa     { border-color: #f6ad55; }
+.flip-front.versicolor { border-color: #68d391; }
+.flip-front.virginica  { border-color: #76e4f7; }
+.flip-back.setosa     { background: linear-gradient(135deg,#b7791f,#f6ad55); }
+.flip-back.versicolor { background: linear-gradient(135deg,#276749,#68d391); }
+.flip-back.virginica  { background: linear-gradient(135deg,#2c7a7b,#76e4f7); }
+
+.f-icon { font-size: 2.8rem; margin-bottom: 10px; }
+.f-name { font-size: 1rem; font-weight: 800; color: #fff; }
+.f-hint { font-size: 0.68rem; color: #7f8c8d; margin-top: 4px; }
+.b-title { font-size: 0.75rem; font-weight: 800; color: rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.b-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(0,0,0,0.75); margin-bottom: 6px; font-weight: 600; }
+.b-row span:last-child { color: rgba(0,0,0,0.9); }
+
+/* ── MODEL CARDS ── */
+.model-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+@media(max-width:640px){ .model-grid { grid-template-columns: 1fr; } }
+
+.model-card {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  border-radius: 14px;
+  padding: 20px;
+  transition: border-color .2s, transform .2s;
+}
+.model-card:hover { border-color: #e94560; transform: translateY(-3px); }
+.model-card.top { border-color: #e94560; }
+
+.mc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.mc-name { font-size: 0.92rem; font-weight: 800; color: #fff; }
+.mc-badge {
+  font-size: 0.6rem; font-weight: 700;
+  background: #e94560; color: white;
+  padding: 3px 10px; border-radius: 20px;
+  letter-spacing: 1px;
+}
+.mc-acc { font-size: 2.2rem; font-weight: 800; color: #e94560; line-height: 1; }
+.mc-lbl { font-size: 0.65rem; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+.mc-sub { font-size: 0.78rem; color: #7f8c8d; margin-top: 10px; }
+.bar { height: 5px; background: #0f3460; border-radius: 3px; margin-top: 12px; overflow: hidden; }
+.bar-f { height: 5px; border-radius: 3px; background: #e94560; transition: width 1.4s ease; width: 0; }
+
+/* ── FEATURE IMPORTANCE ── */
+.fi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:580px){ .fi-grid { grid-template-columns: 1fr; } }
+
+.fi-card {
+  background: #16213e;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #0f3460;
+}
+.fi-card-title { font-size: 0.75rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+
+.fi-item { margin-bottom: 14px; }
+.fi-top  { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px; }
+.fi-top span:first-child { color: #e0e0e0; font-weight: 600; }
+.fi-top span:last-child  { color: #e94560; font-weight: 700; }
+.fi-track { height: 8px; background: #0f3460; border-radius: 4px; overflow: hidden; }
+.fi-fill  { height: 8px; border-radius: 4px; transition: width 1.4s ease; width: 0; }
+.fi-fill.p { background: linear-gradient(90deg,#e94560,#f6ad55); }
+.fi-fill.s { background: linear-gradient(90deg,#0f3460,#76e4f7); }
+
+/* ── CONFUSION MATRIX ── */
+.cm-wrap { display: flex; justify-content: center; margin-top: 8px; }
+.cm-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, 80px);
+  gap: 5px;
+  align-items: center;
+}
+.cm-head { font-size: 0.68rem; color: #7f8c8d; text-align: center; padding: 4px; font-weight: 700; }
+.cm-row-head { font-size: 0.68rem; color: #7f8c8d; font-weight: 700; padding-right: 8px; white-space: nowrap; }
+.cm-cell {
+  height: 60px;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 800;
+}
+.cm-cell sub { font-size: 0.58rem; font-weight: 400; color: inherit; opacity: .7; }
+.hit  { background: rgba(104,211,145,0.2); color: #68d391; border: 1px solid rgba(104,211,145,0.3); }
+.miss { background: rgba(233,69,96,0.12); color: #e94560; border: 1px solid rgba(233,69,96,0.2); }
+
+/* ── PREDICTOR ── */
+.pred-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width:640px){ .pred-layout { grid-template-columns: 1fr; } }
+
+.slider-panel {
+  background: #16213e;
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid #0f3460;
+}
+.slider-title { font-size: 0.75rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 18px; }
+
+.sl-item { margin-bottom: 18px; }
+.sl-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px; }
+.sl-label span:first-child { color: #e0e0e0; font-weight: 600; }
+.sl-label span:last-child  { background: #e94560; color: white; padding: 1px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+input[type=range] {
+  width: 100%; accent-color: #e94560;
+  cursor: pointer; height: 4px;
+}
+
+.classify-btn {
+  width: 100%; padding: 14px;
+  background: #e94560;
+  color: white; border: none;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem; font-weight: 800;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+  margin-top: 4px;
+}
+.classify-btn:hover { opacity: .9; transform: translateY(-1px); }
+
+.result-panel {
+  background: #16213e;
+  border-radius: 14px;
+  padding: 22px;
+  border: 2px solid #0f3460;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  min-height: 280px;
+  transition: border-color .4s;
+}
+.result-panel.setosa     { border-color: #f6ad55; }
+.result-panel.versicolor { border-color: #68d391; }
+.result-panel.virginica  { border-color: #76e4f7; }
+
+.res-big   { font-size: 4rem; margin-bottom: 8px; }
+.res-name  { font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.res-conf  { font-size: 0.78rem; color: #7f8c8d; margin-bottom: 14px; }
+.res-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.chip {
+  background: #0f3460; color: #e0e0e0;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 4px 12px; border-radius: 20px;
+}
+.idle-text { color: #4a5568; font-size: 0.85rem; line-height: 1.8; }
+
+/* responsive */
+@media(max-width:720px){
+  .sidebar { display: none; }
+  .main { padding: 20px 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="flower">🌸</div>
+      <h2>Iris Classifier</h2>
+      <p>ML · 150 Samples</p>
+    </div>
+
+    <button class="nav-btn active" onclick="show('overview',this)"><span class="ico">🏠</span> Overview</button>
+    <button class="nav-btn" onclick="show('species',this)"><span class="ico">🌺</span> Species</button>
+    <button class="nav-btn" onclick="show('models',this)"><span class="ico">🤖</span> Models</button>
+    <button class="nav-btn" onclick="show('features',this)"><span class="ico">📊</span> Features</button>
+    <button class="nav-btn" onclick="show('predict',this)"><span class="ico">🎯</span> Predict</button>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="overview" class="section active">
+      <div class="page-title">Iris Flower Classification</div>
+      <div class="page-sub">A classic ML dataset — classify 3 species based on 4 measurements.</div>
+
+      <div class="pills">
+        <div class="pill"><span class="p-val">150</span><span class="p-lbl">Total Samples</span></div>
+        <div class="pill"><span class="p-val">3</span><span class="p-lbl">Species</span></div>
+        <div class="pill"><span class="p-val">4</span><span class="p-lbl">Features</span></div>
+        <div class="pill"><span class="p-val">50</span><span class="p-lbl">Each Species</span></div>
+        <div class="pill"><span class="p-val">100%</span><span class="p-lbl">Test Accuracy</span></div>
+        <div class="pill"><span class="p-val">97.3%</span><span class="p-lbl">Best CV Score</span></div>
+      </div>
+
+      <div style="background:#16213e;border-radius:14px;padding:22px;border:1px solid #0f3460;margin-bottom:20px">
+        <div style="font-size:0.75rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px">What is this project?</div>
+        <p style="font-size:0.85rem;color:#bbb;line-height:1.9">
+          The Iris dataset contains measurements of 150 flowers across 3 species —
+          <b style="color:#f6ad55">Setosa</b>, <b style="color:#68d391">Versicolor</b>, and <b style="color:#76e4f7">Virginica</b>.
+          We trained 4 machine learning models to classify flowers based on their
+          <b style="color:#e0e0e0">sepal</b> and <b style="color:#e0e0e0">petal</b> measurements.
+          All 4 models achieved <b style="color:#e94560">100% accuracy</b> on the test set.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:#16213e;border-radius:14px;padding:20px;border:1px solid #0f3460">
+          <div style="font-size:0.75rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">4 Features Used</div>
+          <div style="font-size:0.85rem;color:#bbb;line-height:2.1">
+            📏 Sepal Length (cm)<br>
+            📐 Sepal Width (cm)<br>
+            🌿 Petal Length (cm)<br>
+            🌱 Petal Width (cm)
+          </div>
+        </div>
+        <div style="background:#16213e;border-radius:14px;padding:20px;border:1px solid #0f3460">
+          <div style="font-size:0.75rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Models Tested</div>
+          <div style="font-size:0.85rem;color:#bbb;line-height:2.1">
+            🔵 K-Nearest Neighbors<br>
+            🌳 Decision Tree<br>
+            🌲 Random Forest<br>
+            ⚡ Support Vector Machine
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPECIES -->
+    <div id="species" class="section">
+      <div class="page-title">Species Explorer</div>
+      <div class="page-sub">Hover over a card to see the average measurements for each species.</div>
+      <div class="flip-row">
+        <div class="flip-card">
+          <div class="flip-inner">
+            <div class="flip-front setosa">
+              <div class="f-icon">🌼</div>
+              <div class="f-name">Iris Setosa</div>
+              <div class="f-hint">Hover to see stats →</div>
+            </div>
+            <div class="flip-back setosa">
+              <div class="b-title">Avg Measurements</div>
+              <div class="b-row"><span>Sepal Length</span><span>5.01 cm</span></div>
+              <div class="b-row"><span>Sepal Width</span><span>3.42 cm</span></div>
+              <div class="b-row"><span>Petal Length</span><span>1.46 cm</span></div>
+              <div class="b-row"><span>Petal Width</span><span>0.24 cm</span></div>
+              <div style="margin-top:10px;font-size:0.72rem;color:rgba(0,0,0,0.6)">✓ Smallest petals · Easiest to classify</div>
+            </div>
+          </div>
+        </div>
+        <div class="flip-card">
+          <div class="flip-inner">
+            <div class="flip-front versicolor">
+              <div class="f-icon">🌸</div>
+              <div class="f-name">Iris Versicolor</div>
+              <div class="f-hint">Hover to see stats →</div>
+            </div>
+            <div class="flip-back versicolor">
+              <div class="b-title">Avg Measurements</div>
+              <div class="b-row"><span>Sepal Length</span><span>5.94 cm</span></div>
+              <div class="b-row"><span>Sepal Width</span><span>2.77 cm</span></div>
+              <div class="b-row"><span>Petal Length</span><span>4.26 cm</span></div>
+              <div class="b-row"><span>Petal Width</span><span>1.33 cm</span></div>
+              <div style="margin-top:10px;font-size:0.72rem;color:rgba(0,0,0,0.6)">✓ Medium size · Middle ground</div>
+            </div>
+          </div>
+        </div>
+        <div class="flip-card">
+          <div class="flip-inner">
+            <div class="flip-front virginica">
+              <div class="f-icon">💜</div>
+              <div class="f-name">Iris Virginica</div>
+              <div class="f-hint">Hover to see stats →</div>
+            </div>
+            <div class="flip-back virginica">
+              <div class="b-title">Avg Measurements</div>
+              <div class="b-row"><span>Sepal Length</span><span>6.59 cm</span></div>
+              <div class="b-row"><span>Sepal Width</span><span>2.97 cm</span></div>
+              <div class="b-row"><span>Petal Length</span><span>5.55 cm</span></div>
+              <div class="b-row"><span>Petal Width</span><span>2.03 cm</span></div>
+              <div style="margin-top:10px;font-size:0.72rem;color:rgba(0,0,0,0.6)">✓ Largest petals · Biggest overall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- species comparison bar -->
+      <div style="background:#16213e;border-radius:14px;padding:22px;border:1px solid #0f3460">
+        <div style="font-size:0.75rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px">Petal Length Comparison</div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px"><span style="color:#f6ad55;font-weight:700">Setosa</span><span style="color:#7f8c8d">1.46 cm</span></div>
+          <div style="height:10px;background:#0f3460;border-radius:5px;overflow:hidden"><div style="height:10px;width:0;background:#f6ad55;border-radius:5px;transition:width 1.4s ease" data-w="21"></div></div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px"><span style="color:#68d391;font-weight:700">Versicolor</span><span style="color:#7f8c8d">4.26 cm</span></div>
+          <div style="height:10px;background:#0f3460;border-radius:5px;overflow:hidden"><div style="height:10px;width:0;background:#68d391;border-radius:5px;transition:width 1.4s ease" data-w="62"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px"><span style="color:#76e4f7;font-weight:700">Virginica</span><span style="color:#7f8c8d">5.55 cm</span></div>
+          <div style="height:10px;background:#0f3460;border-radius:5px;overflow:hidden"><div style="height:10px;width:0;background:#76e4f7;border-radius:5px;transition:width 1.4s ease" data-w="80"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODELS -->
+    <div id="models" class="section">
+      <div class="page-title">Model Results</div>
+      <div class="page-sub">4 classifiers trained with 5-fold cross-validation · 80/20 train-test split.</div>
+      <div class="model-grid">
+        <div class="model-card top">
+          <div class="mc-head">
+            <div class="mc-name">K-Nearest Neighbors</div>
+            <div class="mc-badge">BEST CV</div>
+          </div>
+          <div class="mc-acc">97.33%</div>
+          <div class="mc-lbl">Cross-Validation Accuracy</div>
+          <div class="mc-sub">Test: 100% &nbsp;·&nbsp; Std: ±2.49%</div>
+          <div class="bar"><div class="bar-f" data-w="97.33"></div></div>
+        </div>
+        <div class="model-card">
+          <div class="mc-head"><div class="mc-name">Random Forest</div></div>
+          <div class="mc-acc">96.67%</div>
+          <div class="mc-lbl">Cross-Validation Accuracy</div>
+          <div class="mc-sub">Test: 100% &nbsp;·&nbsp; Std: ±2.11%</div>
+          <div class="bar"><div class="bar-f" data-w="96.67"></div></div>
+        </div>
+        <div class="model-card">
+          <div class="mc-head"><div class="mc-name">SVM (RBF Kernel)</div></div>
+          <div class="mc-acc">96.67%</div>
+          <div class="mc-lbl">Cross-Validation Accuracy</div>
+          <div class="mc-sub">Test: 100% &nbsp;·&nbsp; Std: ±2.11%</div>
+          <div class="bar"><div class="bar-f" data-w="96.67"></div></div>
+        </div>
+        <div class="model-card">
+          <div class="mc-head"><div class="mc-name">Decision Tree</div></div>
+          <div class="mc-acc">95.33%</div>
+          <div class="mc-lbl">Cross-Validation Accuracy</div>
+          <div class="mc-sub">Test: 100% &nbsp;·&nbsp; Std: ±3.40%</div>
+          <div class="bar"><div class="bar-f" data-w="95.33"></div></div>
+        </div>
+      </div>
+
+      <!-- confusion matrix -->
+      <div style="background:#16213e;border-radius:14px;padding:24px;border:1px solid #0f3460;margin-top:20px">
+        <div style="font-size:0.75rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Confusion Matrix · Random Forest · 30 Test Samples</div>
+        <div style="font-size:0.78rem;color:#4a5568;margin-bottom:18px">Perfect score — zero misclassifications</div>
+        <div class="cm-wrap">
+          <table class="cm-grid">
+            <tr>
+              <td></td>
+              <td class="cm-head">Pred<br>Setosa</td>
+              <td class="cm-head">Pred<br>Versic.</td>
+              <td class="cm-head">Pred<br>Virgin.</td>
+            </tr>
+            <tr>
+              <td class="cm-row-head" style="color:#f6ad55">Setosa</td>
+              <td class="cm-cell hit">10<br><sub>✓</sub></td>
+              <td class="cm-cell miss">0</td>
+              <td class="cm-cell miss">0</td>
+            </tr>
+            <tr>
+              <td class="cm-row-head" style="color:#68d391">Versic.</td>
+              <td class="cm-cell miss">0</td>
+              <td class="cm-cell hit">9<br><sub>✓</sub></td>
+              <td class="cm-cell miss">0</td>
+            </tr>
+            <tr>
+              <td class="cm-row-head" style="color:#76e4f7">Virgin.</td>
+              <td class="cm-cell miss">0</td>
+              <td class="cm-cell miss">0</td>
+              <td class="cm-cell hit">11<br><sub>✓</sub></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div id="features" class="section">
+      <div class="page-title">Feature Analysis</div>
+      <div class="page-sub">Which measurements matter most for classification?</div>
+      <div class="fi-grid">
+        <div class="fi-card">
+          <div class="fi-card-title">Feature Importance · Random Forest</div>
+          <div class="fi-item">
+            <div class="fi-top"><span>🌿 Petal Length</span><span>44.0%</span></div>
+            <div class="fi-track"><div class="fi-fill p" data-w="44"></div></div>
+          </div>
+          <div class="fi-item">
+            <div class="fi-top"><span>🌱 Petal Width</span><span>42.2%</span></div>
+            <div class="fi-track"><div class="fi-fill p" data-w="42.2"></div></div>
+          </div>
+          <div class="fi-item">
+            <div class="fi-top"><span>📏 Sepal Length</span><span>10.8%</span></div>
+            <div class="fi-track"><div class="fi-fill s" data-w="10.8"></div></div>
+          </div>
+          <div class="fi-item">
+            <div class="fi-top"><span>📐 Sepal Width</span><span>3.0%</span></div>
+            <div class="fi-track"><div class="fi-fill s" data-w="3"></div></div>
+          </div>
+        </div>
+        <div class="fi-card">
+          <div class="fi-card-title">Key Insight</div>
+          <div style="font-size:3rem;text-align:center;margin:10px 0">86%</div>
+          <div style="text-align:center;font-size:0.82rem;color:#7f8c8d;margin-bottom:16px">of prediction power comes from petal measurements alone</div>
+          <div style="font-size:0.8rem;color:#bbb;line-height:1.9">
+            🌸 Petal Length + Petal Width together nearly fully determine the species.<br><br>
+            📏 Sepal measurements add a small but useful signal.<br><br>
+            🌼 Setosa is perfectly separable by petal size (&lt;2.5 cm).<br><br>
+            💜 Versicolor/Virginica overlap slightly in sepal space but not in petal space.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREDICT -->
+    <div id="predict" class="section">
+      <div class="page-title">Classify a Flower</div>
+      <div class="page-sub">Adjust the sliders and click Classify to predict the species.</div>
+      <div class="pred-layout">
+        <div class="slider-panel">
+          <div class="slider-title">Enter Measurements</div>
+
+          <div class="sl-item">
+            <div class="sl-label"><span>Sepal Length</span><span id="slv">5.8 cm</span></div>
+            <input type="range" id="sl" min="4.3" max="7.9" step="0.1" value="5.8" oninput="upd('sl','slv')">
+          </div>
+          <div class="sl-item">
+            <div class="sl-label"><span>Sepal Width</span><span id="swv">3.0 cm</span></div>
+            <input type="range" id="sw" min="2.0" max="4.4" step="0.1" value="3.0" oninput="upd('sw','swv')">
+          </div>
+          <div class="sl-item">
+            <div class="sl-label"><span>Petal Length</span><span id="plv">4.0 cm</span></div>
+            <input type="range" id="pl" min="1.0" max="6.9" step="0.1" value="4.0" oninput="upd('pl','plv')">
+          </div>
+          <div class="sl-item">
+            <div class="sl-label"><span>Petal Width</span><span id="pwv">1.3 cm</span></div>
+            <input type="range" id="pw" min="0.1" max="2.5" step="0.1" value="1.3" oninput="upd('pw','pwv')">
+          </div>
+
+          <button class="classify-btn" onclick="classify()">🔍 Classify Flower</button>
+        </div>
+
+        <div class="result-panel" id="result-panel">
+          <div class="idle-text">← Set measurements and click<br><b style="color:#e94560">Classify Flower</b><br>to see the predicted species.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Nav
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(animateBars, 100);
+}
+
+// Animate bars
+function animateBars() {
+  document.querySelectorAll('[data-w]').forEach(el => {
+    el.style.width = el.dataset.w + '%';
+  });
+}
+setTimeout(animateBars, 400);
+
+// Slider
+function upd(id, vid) {
+  document.getElementById(vid).textContent = parseFloat(document.getElementById(id).value).toFixed(1) + ' cm';
+}
+
+// Classify
+function classify() {
+  const pl = parseFloat(document.getElementById('pl').value);
+  const pw = parseFloat(document.getElementById('pw').value);
+
+  let name, icon, cls, conf, chips;
+  if (pl < 2.5) {
+    name='Iris Setosa'; icon='🌼'; cls='setosa';
+    conf='Very High Confidence · Petal length < 2.5 cm is a clear indicator';
+    chips=['Small petals','Easiest to classify','50 samples'];
+  } else if (pl < 4.9 && pw < 1.7) {
+    name='Iris Versicolor'; icon='🌸'; cls='versicolor';
+    conf='High Confidence · Medium petal size matches Versicolor range';
+    chips=['Medium petals','Middle species','50 samples'];
+  } else {
+    name='Iris Virginica'; icon='💜'; cls='virginica';
+    conf='High Confidence · Large petals indicate Virginica';
+    chips=['Largest petals','Biggest species','50 samples'];
+  }
+
+  const p = document.getElementById('result-panel');
+  p.className = 'result-panel ' + cls;
+  p.innerHTML = `
+    <div class="res-big">${icon}</div>
+    <div class="res-name">${name}</div>
+    <div class="res-conf">${conf}</div>
+    <div class="res-chips">
+      ${chips.map(c=>`<span class="chip">${c}</span>`).join('')}
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
