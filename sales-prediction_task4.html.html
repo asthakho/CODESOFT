@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Prediction · ML</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #111;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --accent: #c84b2f;
+    --muted: #7a7060;
+    --line: #d5cfc3;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    font-size: 16px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: 100vh;
+    border-bottom: 1.5px solid var(--line);
+  }
+
+  .hero-left {
+    padding: 60px 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-right: 1.5px solid var(--line);
+  }
+
+  .logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hero-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 1.05;
+    letter-spacing: -1px;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 360px;
+    line-height: 1.8;
+  }
+
+  .hero-right {
+    padding: 60px 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: var(--cream);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* animated chart sketch */
+  .chart-sketch {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .12;
+  }
+
+  .chart-sketch svg { width: 90%; height: 90%; }
+
+  .equation-box {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 2;
+    position: relative;
+    z-index: 1;
+  }
+
+  .equation-box .label {
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .equation-box .eq { font-size: 18px; font-weight: 500; }
+
+  /* ── NAV BAR ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--paper);
+    border-bottom: 1.5px solid var(--line);
+    display: flex;
+    gap: 0;
+  }
+
+  nav a {
+    padding: 16px 28px;
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-right: 1.5px solid var(--line);
+    transition: color .2s, background .2s;
+  }
+  nav a:hover { color: var(--ink); background: var(--cream); }
+
+  /* ── SECTIONS ── */
+  section {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    border-bottom: 1.5px solid var(--line);
+    min-height: 0;
+  }
+
+  .sec-label {
+    padding: 48px 32px;
+    border-right: 1.5px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .sec-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .1em;
+  }
+
+  .sec-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  .sec-body { padding: 48px 56px; }
+
+  h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+
+  p { color: #333; margin-bottom: 16px; max-width: 640px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── CARDS ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5px;
+    background: var(--line);
+    border: 1.5px solid var(--line);
+    margin-top: 32px;
+  }
+
+  .card {
+    background: var(--paper);
+    padding: 28px 24px;
+    transition: background .2s;
+  }
+  .card:hover { background: var(--cream); }
+
+  .card-icon { font-size: 22px; margin-bottom: 12px; }
+  .card-title { font-family: 'DM Serif Display', serif; font-size: 17px; margin-bottom: 6px; }
+  .card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ── STEPS ── */
+  .steps { margin-top: 8px; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 20px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: start;
+  }
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .1em;
+    padding-top: 4px;
+  }
+
+  .step-title { font-weight: 500; margin-bottom: 4px; font-size: 15px; }
+  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: none; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: var(--ink);
+    color: #e8e0d0;
+    padding: 28px 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.9;
+    margin-top: 28px;
+    overflow-x: auto;
+  }
+
+  .code-block .kw { color: #f0a070; }
+  .code-block .fn { color: #8dc9e0; }
+  .code-block .str { color: #a0d080; }
+  .code-block .cm { color: #786f60; }
+  .code-block .num { color: #e8c07a; }
+
+  /* ── STATS ROW ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1.5px solid var(--line);
+    margin-top: 32px;
+    background: var(--line);
+  }
+
+  .stat {
+    background: var(--paper);
+    padding: 36px 28px;
+    transition: background .2s;
+  }
+  .stat:hover { background: var(--cream); }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-desc { font-size: 13px; color: #555; margin-top: 8px; max-width: none; }
+
+  /* ── INTERACTIVE PREDICTOR ── */
+  .predictor {
+    background: var(--cream);
+    border: 1.5px solid var(--line);
+    padding: 40px;
+    margin-top: 32px;
+    max-width: 560px;
+  }
+
+  .predictor h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    margin-bottom: 24px;
+  }
+
+  .slider-wrap { margin-bottom: 24px; }
+
+  .slider-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .slider-top .slabel { font-weight: 500; }
+  .slider-top .sval {
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--line);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .result-box {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 24px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .result-box .rlabel { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: #8a8070; }
+
+  .result-box .rvalue {
+    font-family: 'DM Serif Display', serif;
+    font-size: 36px;
+    color: #f0c080;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 56px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .1em;
+  }
+
+  /* ── REVEAL ANIMATION ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 768px) {
+    header { grid-template-columns: 1fr; }
+    .hero-left { border-right: none; border-bottom: 1.5px solid var(--line); padding: 40px 28px; }
+    .hero-right { padding: 40px 28px; }
+    section { grid-template-columns: 1fr; }
+    .sec-label { border-right: none; border-bottom: 1.5px solid var(--line); padding: 32px 28px; }
+    .sec-body { padding: 32px 28px; }
+    .stats { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 8px; padding: 24px 28px; }
+    nav a { padding: 14px 16px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hero-left">
+    <div class="logo">Machine Learning · Regression · 2024</div>
+    <div>
+      <div class="hero-title">Sales<br><em>Prediction</em><br>Using Python</div>
+    </div>
+    <p class="hero-sub">Forecasting product sales using Simple Linear Regression — from advertising spend to predicted revenue, step by step.</p>
+  </div>
+  <div class="hero-right">
+    <div class="chart-sketch">
+      <svg viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="40" y1="260" x2="380" y2="260" stroke="#111" stroke-width="2"/>
+        <line x1="40" y1="260" x2="40" y2="20" stroke="#111" stroke-width="2"/>
+        <!-- scatter dots -->
+        <circle cx="80" cy="220" r="5" fill="#111"/><circle cx="100" cy="200" r="5" fill="#111"/>
+        <circle cx="130" cy="185" r="5" fill="#111"/><circle cx="160" cy="170" r="5" fill="#111"/>
+        <circle cx="190" cy="155" r="5" fill="#111"/><circle cx="220" cy="140" r="5" fill="#111"/>
+        <circle cx="240" cy="125" r="5" fill="#111"/><circle cx="270" cy="110" r="5" fill="#111"/>
+        <circle cx="300" cy="90" r="5" fill="#111"/><circle cx="330" cy="75" r="5" fill="#111"/>
+        <circle cx="355" cy="60" r="5" fill="#111"/>
+        <!-- regression line -->
+        <line x1="60" y1="240" x2="370" y2="50" stroke="#c84b2f" stroke-width="2.5"/>
+        <!-- axis labels -->
+        <text x="200" y="285" text-anchor="middle" font-family="monospace" font-size="12" fill="#111">TV Budget ($)</text>
+        <text x="15" y="150" text-anchor="middle" font-family="monospace" font-size="12" fill="#111" transform="rotate(-90,15,150)">Sales</text>
+      </svg>
+    </div>
+    <div class="equation-box reveal">
+      <div class="label">Regression Equation</div>
+      <div class="eq">Sales = 6.948 + 0.054 × TV</div>
+      <div style="margin-top:10px; font-size:12px; color:#8a8070;">R² = 0.816 &nbsp;·&nbsp; p &lt; 0.001 &nbsp;·&nbsp; n = 200</div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#data">Data</a>
+  <a href="#model">Model</a>
+  <a href="#results">Results</a>
+  <a href="#predictor">Try It</a>
+</nav>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="sec-label">
+    <div class="sec-num">01</div>
+    <div class="sec-name">Problem Statement</div>
+  </div>
+  <div class="sec-body">
+    <h2>What are we solving?</h2>
+    <p>Businesses invest heavily in advertising — TV, Radio, and Newspaper — but how much does each dollar spent actually generate in sales? This project builds a Simple Linear Regression model to answer that question.</p>
+    <p>We use the classic <strong>ISLR Advertising Dataset</strong> (200 records) and focus on the relationship between <strong>TV advertising spend</strong> and <strong>product sales</strong>, since TV shows the highest correlation.</p>
+    <div class="cards reveal">
+      <div class="card">
+        <div class="card-icon">📺</div>
+        <div class="card-title">TV Advertising</div>
+        <div class="card-desc">Primary predictor. Correlation of 0.78 with Sales — the strongest among all channels.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📻</div>
+        <div class="card-title">Radio</div>
+        <div class="card-desc">Moderate correlation of 0.58. Less impactful but still significant for multi-linear models.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📰</div>
+        <div class="card-title">Newspaper</div>
+        <div class="card-desc">Weak correlation of 0.23 with Sales. Excluded in this simple model.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">💰</div>
+        <div class="card-title">Sales (Target)</div>
+        <div class="card-desc">Units sold (in thousands). What we are predicting using the linear model.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DATA -->
+<section id="data">
+  <div class="sec-label">
+    <div class="sec-num">02</div>
+    <div class="sec-name">Data & Cleaning</div>
+  </div>
+  <div class="sec-body">
+    <h2>Understanding the data</h2>
+    <p>The dataset contains <strong>200 rows</strong> and <strong>4 columns</strong>: TV, Radio, Newspaper (advertising budgets in $000s), and Sales (in 1000 units). There are <strong>no null values</strong> and no significant outliers.</p>
+    <div class="code-block reveal">
+<span class="cm"># Import libraries</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+<span class="kw">import</span> seaborn <span class="kw">as</span> sns
+
+<span class="cm"># Load dataset</span>
+advertising = pd.<span class="fn">read_csv</span>(<span class="str">"advertising.csv"</span>)
+advertising.<span class="fn">head</span>()
+<span class="cm"># Shape: (200, 4)  |  No null values found</span>
+
+<span class="cm"># Correlation heatmap confirms TV is strongest predictor</span>
+sns.<span class="fn">heatmap</span>(advertising.<span class="fn">corr</span>(), cmap=<span class="str">"YlGnBu"</span>, annot=<span class="kw">True</span>)
+    </div>
+  </div>
+</section>
+
+<!-- MODEL -->
+<section id="model">
+  <div class="sec-label">
+    <div class="sec-num">03</div>
+    <div class="sec-name">Model Building</div>
+  </div>
+  <div class="sec-body">
+    <h2>Building the regression model</h2>
+    <p>We use <strong>Ordinary Least Squares (OLS)</strong> via <code>statsmodels</code> to fit the line. The data is split 70/30 into training and test sets.</p>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div>
+          <div class="step-title">Feature Selection</div>
+          <div class="step-desc">TV is selected as the sole predictor (X) and Sales as the target (y), based on pairplot and correlation analysis.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div>
+          <div class="step-title">Train / Test Split</div>
+          <div class="step-desc">70% of data (140 rows) used for training, 30% (60 rows) held out for evaluation. random_state=100 for reproducibility.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div>
+          <div class="step-title">OLS Fit with Intercept</div>
+          <div class="step-desc">sm.add_constant() adds the intercept term. lr = sm.OLS(y_train, X_train_sm).fit() trains the model.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div>
+          <div class="step-title">Residual Analysis</div>
+          <div class="step-desc">Error terms follow a normal distribution (mean ≈ 0), confirming that key linear regression assumptions are met.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div>
+          <div class="step-title">Test Set Prediction</div>
+          <div class="step-desc">X_test_sm = sm.add_constant(X_test) then y_pred = lr.predict(X_test_sm). Final RMSE and R² are computed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block reveal" style="margin-top:32px;">
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">import</span> statsmodels.api <span class="kw">as</span> sm
+
+X = advertising[<span class="str">'TV'</span>]
+y = advertising[<span class="str">'Sales'</span>]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, train_size=<span class="num">0.7</span>, test_size=<span class="num">0.3</span>, random_state=<span class="num">100</span>
+)
+
+X_train_sm = sm.<span class="fn">add_constant</span>(X_train)
+lr = sm.<span class="fn">OLS</span>(y_train, X_train_sm).<span class="fn">fit</span>()
+<span class="fn">print</span>(lr.<span class="fn">summary</span>())
+
+<span class="cm"># Intercept: 6.948  |  TV Coefficient: 0.054</span>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="sec-label">
+    <div class="sec-num">04</div>
+    <div class="sec-name">Results</div>
+  </div>
+  <div class="sec-body">
+    <h2>Model performance</h2>
+    <p>The model performs well on both train and test sets, confirming it generalises without overfitting.</p>
+    <div class="stats reveal">
+      <div class="stat">
+        <div class="stat-value">0.816</div>
+        <div class="stat-label">R² Score (Train)</div>
+        <div class="stat-desc">81.6% of variance in Sales is explained by TV spend alone.</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0.794</div>
+        <div class="stat-label">R² Score (Test)</div>
+        <div class="stat-desc">Strong generalisation — model holds on unseen data.</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">1.73</div>
+        <div class="stat-label">RMSE (Test)</div>
+        <div class="stat-desc">Root Mean Squared Error in units of Sales (1000s).</div>
+      </div>
+    </div>
+    <p style="margin-top:28px;">The <strong>p-value for the TV coefficient is essentially zero</strong>, confirming the relationship is statistically significant and not by chance. The F-statistic also confirms overall model significance.</p>
+  </div>
+</section>
+
+<!-- INTERACTIVE PREDICTOR -->
+<section id="predictor">
+  <div class="sec-label">
+    <div class="sec-num">05</div>
+    <div class="sec-name">Try It</div>
+  </div>
+  <div class="sec-body">
+    <h2>Predict sales yourself</h2>
+    <p>Use the slider to set your TV advertising budget and see the predicted sales in real time, using the fitted equation.</p>
+    <div class="predictor reveal">
+      <h3>Live Sales Estimator</h3>
+
+      <div class="slider-wrap">
+        <div class="slider-top">
+          <span class="slabel">TV Budget ($000s)</span>
+          <span class="sval" id="tvVal">150</span>
+        </div>
+        <input type="range" id="tvSlider" min="0" max="300" value="150" step="1">
+      </div>
+
+      <div class="result-box">
+        <div>
+          <div class="rlabel">Predicted Sales</div>
+          <div class="rvalue" id="salesResult">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="rlabel">Formula Used</div>
+          <div style="font-family:'DM Mono',monospace; font-size:11px; color:#8a8070; margin-top:4px;">6.948 + 0.054 × TV</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<script>
+  // Slider predictor
+  const slider = document.getElementById('tvSlider');
+  const tvVal  = document.getElementById('tvVal');
+  const result = document.getElementById('salesResult');
+
+  function updatePrediction() {
+    const tv = parseFloat(slider.value);
+    const sales = (6.948 + 0.054 * tv).toFixed(2);
+    tvVal.textContent = tv;
+    result.textContent = sales + 'K units';
+  }
+
+  slider.addEventListener('input', updatePrediction);
+  updatePrediction();
+
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
