@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDb India · Movie Rating Prediction</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f5f6fa;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: #1a1a2e;
+    color: white;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .header h1 { font-size: 1.8rem; font-weight: 700; }
+  .header h1 span { color: #f5c518; }
+  .header p { color: #aaa; font-size: 0.85rem; margin-top: 6px; }
+
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Stat row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:600px){ .stats { grid-template-columns: repeat(2,1fr); } }
+
+  .stat {
+    background: white;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .stat .val { font-size: 1.8rem; font-weight: 700; color: #f5c518; }
+  .stat .lbl { font-size: 0.72rem; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Section title */
+  h2 { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 14px; margin-top: 28px; }
+
+  /* Model cards */
+  .models { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  @media(max-width:600px){ .models { grid-template-columns: 1fr; } }
+
+  .model {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    border-top: 3px solid #e0e0e0;
+  }
+  .model.best { border-top-color: #f5c518; }
+  .model-name { font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 10px; }
+  .model-r2 { font-size: 2.2rem; font-weight: 700; color: #1a1a2e; }
+  .model-r2 span { font-size: 0.85rem; color: #aaa; font-weight: 400; }
+  .model-row { display: flex; justify-content: space-between; margin-top: 12px; }
+  .model-metric { text-align: center; }
+  .model-metric .mv { font-size: 0.95rem; font-weight: 600; color: #333; }
+  .model-metric .ml { font-size: 0.65rem; color: #aaa; text-transform: uppercase; margin-top: 2px; }
+  .best-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    background: #f5c518;
+    color: #1a1a2e;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .progress { height: 4px; background: #f0f0f0; border-radius: 2px; margin-top: 14px; }
+  .progress-fill { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #f5c518, #ff9800); transition: width 1.5s ease; width: 0; }
+
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:640px){ .two-col { grid-template-columns: 1fr; } }
+
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .card-title { font-size: 0.72rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; font-weight: 600; }
+
+  /* Bar chart */
+  .bar-item { margin-bottom: 12px; }
+  .bar-label-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .bar-label { font-size: 0.78rem; color: #444; }
+  .bar-value { font-size: 0.78rem; color: #888; font-weight: 600; }
+  .bar-track { height: 7px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 7px; border-radius: 4px; transition: width 1.4s ease; width: 0; background: linear-gradient(90deg, #f5c518, #ff9800); }
+  .bar-fill.blue { background: linear-gradient(90deg, #667eea, #764ba2); }
+  .bar-fill.green { background: linear-gradient(90deg, #11998e, #38ef7d); }
+
+  /* Predictor */
+  .predictor {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .pred-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  @media(max-width:600px){ .pred-grid { grid-template-columns: 1fr 1fr; } }
+
+  .field label { display: block; font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .field select, .field input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    color: #333;
+    font-family: 'Inter', sans-serif;
+    background: #fafafa;
+    transition: border-color .2s;
+    appearance: none;
+  }
+  .field select:focus, .field input:focus { outline: none; border-color: #f5c518; background: white; }
+
+  .pred-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background .2s, transform .1s;
+  }
+  .pred-btn:hover { background: #2d2d4e; transform: translateY(-1px); }
+
+  .result-box {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    background: #fffbea;
+    border: 1.5px solid #f5c518;
+    border-radius: 10px;
+    text-align: center;
+    animation: pop .3s ease;
+  }
+  @keyframes pop { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:scale(1); } }
+  .result-stars { font-size: 1.5rem; color: #f5c518; letter-spacing: 3px; margin-bottom: 8px; }
+  .result-score { font-size: 2.8rem; font-weight: 700; color: #1a1a2e; line-height: 1; }
+  .result-score span { font-size: 1rem; color: #aaa; font-weight: 400; }
+  .result-label { font-size: 0.8rem; color: #888; margin-top: 6px; }
+
+  /* SVG charts */
+  #hist-svg { width: 100%; height: 120px; }
+  #decade-svg { width: 100%; height: 130px; }
+
+  footer { text-align: center; padding: 24px; font-size: 0.72rem; color: #bbb; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎬 <span>IMDb</span> India — Movie Rating Prediction</h1>
+  <p>Machine Learning Analysis · 15,509 Indian Films</p>
+</div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats" style="margin-top:20px">
+    <div class="stat"><div class="val">7,919</div><div class="lbl">Movies with Ratings</div></div>
+    <div class="stat"><div class="val">5.84</div><div class="lbl">Average Rating</div></div>
+    <div class="stat"><div class="val">76.6%</div><div class="lbl">Best R² Score</div></div>
+    <div class="stat"><div class="val">0.44</div><div class="lbl">Best MAE</div></div>
+  </div>
+
+  <!-- Models -->
+  <h2>📊 Model Comparison</h2>
+  <div class="models">
+    <div class="model best">
+      <div class="best-badge">★ BEST</div>
+      <div class="model-name">Random Forest</div>
+      <div class="model-r2">0.766 <span>R²</span></div>
+      <div class="model-row">
+        <div class="model-metric"><div class="mv">0.660</div><div class="ml">RMSE</div></div>
+        <div class="model-metric"><div class="mv">0.439</div><div class="ml">MAE</div></div>
+        <div class="model-metric"><div class="mv">0.763</div><div class="ml">CV R²</div></div>
+      </div>
+      <div class="progress"><div class="progress-fill" data-w="76.6"></div></div>
+    </div>
+    <div class="model">
+      <div class="model-name">Gradient Boosting</div>
+      <div class="model-r2">0.746 <span>R²</span></div>
+      <div class="model-row">
+        <div class="model-metric"><div class="mv">0.687</div><div class="ml">RMSE</div></div>
+        <div class="model-metric"><div class="mv">0.501</div><div class="ml">MAE</div></div>
+        <div class="model-metric"><div class="mv">0.752</div><div class="ml">CV R²</div></div>
+      </div>
+      <div class="progress"><div class="progress-fill" data-w="74.6"></div></div>
+    </div>
+    <div class="model">
+      <div class="model-name">Ridge Regression</div>
+      <div class="model-r2">0.632 <span>R²</span></div>
+      <div class="model-row">
+        <div class="model-metric"><div class="mv">0.827</div><div class="ml">RMSE</div></div>
+        <div class="model-metric"><div class="mv">0.642</div><div class="ml">MAE</div></div>
+        <div class="model-metric"><div class="mv">0.627</div><div class="ml">CV R²</div></div>
+      </div>
+      <div class="progress"><div class="progress-fill" data-w="63.2"></div></div>
+    </div>
+  </div>
+
+  <!-- Feature importance + Genre -->
+  <h2>📈 Feature & Genre Analysis</h2>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Feature Importance (Random Forest)</div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Director</span><span class="bar-value">49.1%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="49.1"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Actor 2</span><span class="bar-value">11.0%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="11.0"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Actor 1</span><span class="bar-value">9.5%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="9.5"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Actor 3</span><span class="bar-value">9.4%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="9.4"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Log Votes</span><span class="bar-value">6.6%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="6.6"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Year</span><span class="bar-value">3.9%</span></div>
+        <div class="bar-track"><div class="bar-fill" data-w="3.9"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Rating by Genre</div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Documentary</span><span class="bar-value">7.61</span></div>
+        <div class="bar-track"><div class="bar-fill green" data-w="76.1"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Biography</span><span class="bar-value">6.67</span></div>
+        <div class="bar-track"><div class="bar-fill green" data-w="66.7"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Fantasy</span><span class="bar-value">6.25</span></div>
+        <div class="bar-track"><div class="bar-fill blue" data-w="62.5"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Drama</span><span class="bar-value">6.17</span></div>
+        <div class="bar-track"><div class="bar-fill blue" data-w="61.7"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Crime</span><span class="bar-value">6.02</span></div>
+        <div class="bar-track"><div class="bar-fill blue" data-w="60.2"></div></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-row"><span class="bar-label">Comedy</span><span class="bar-value">5.81</span></div>
+        <div class="bar-track"><div class="bar-fill blue" data-w="58.1"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts: Histogram + Decade -->
+  <h2>📉 Data Insights</h2>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Rating Distribution</div>
+      <svg id="hist-svg" viewBox="0 0 380 120" preserveAspectRatio="none"></svg>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#bbb;margin-top:4px">
+        <span>1.0</span><span>4.0</span><span>6.0</span><span>8.0</span><span>10.0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Rating by Decade</div>
+      <svg id="decade-svg" viewBox="0 0 380 130" preserveAspectRatio="none"></svg>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#bbb;margin-top:4px">
+        <span>1950s</span><span>1970s</span><span>1990s</span><span>2010s</span><span>2020s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Predictor -->
+  <h2>🎯 Predict a Movie's Rating</h2>
+  <div class="predictor">
+    <div class="pred-grid">
+      <div class="field">
+        <label>Genre</label>
+        <select id="p-genre">
+          <option value="Documentary">Documentary</option>
+          <option value="Biography">Biography</option>
+          <option value="Drama" selected>Drama</option>
+          <option value="Fantasy">Fantasy</option>
+          <option value="Crime">Crime</option>
+          <option value="Adventure">Adventure</option>
+          <option value="Comedy">Comedy</option>
+          <option value="Action">Action</option>
+          <option value="Horror">Horror</option>
+          <option value="Romance">Romance</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Release Year</label>
+        <input type="number" id="p-year" value="2015" min="1900" max="2024">
+      </div>
+      <div class="field">
+        <label>Vote Count</label>
+        <input type="number" id="p-votes" value="500" min="0">
+      </div>
+      <div class="field">
+        <label>Director Tier</label>
+        <select id="p-dir">
+          <option value="legendary">Legendary</option>
+          <option value="established" selected>Established</option>
+          <option value="new">New / Unknown</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Cast Strength</label>
+        <select id="p-cast">
+          <option value="A">A-List Stars</option>
+          <option value="B" selected>Mid-Tier</option>
+          <option value="C">Newcomers</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Duration (min)</label>
+        <input type="number" id="p-dur" value="120" min="30" max="300">
+      </div>
+    </div>
+    <button class="pred-btn" onclick="predict()">Predict Rating</button>
+    <div class="result-box" id="result-box">
+      <div class="result-stars" id="r-stars"></div>
+      <div class="result-score" id="r-score"></div>
+      <div class="result-label" id="r-label"></div>
+    </div>
+  </div>
+
+  <!-- Key Insights -->
+  <h2>💡 Key Insights</h2>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">What Affects Ratings Most</div>
+      <ul style="list-style:none;font-size:0.82rem;color:#555;line-height:2.2">
+        <li>🎬 Director is the strongest predictor (49% importance)</li>
+        <li>👥 All 3 actors combined contribute ~30%</li>
+        <li>🗳️ Vote count reflects audience reach & quality</li>
+        <li>📽️ Documentary & Biography genres rate highest</li>
+        <li>🕰️ 1950s–60s films have the highest avg ratings</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Methodology</div>
+      <ul style="list-style:none;font-size:0.82rem;color:#555;line-height:2.2">
+        <li>📂 7,919 movies after dropping rows without ratings</li>
+        <li>⚙️ Target-encoded Director & Actors (smoothed)</li>
+        <li>📊 Log-transformed Votes to reduce skew</li>
+        <li>🔀 80/20 train-test split · 5-fold cross-validation</li>
+        <li>🏆 Random Forest wins with R² = 0.766, MAE = 0.44</li>
+      </ul>
+    </div>
+  </div>
+
+  </div>
+
+<script>
+// Animate bars
+setTimeout(() => {
+  document.querySelectorAll('.bar-fill[data-w], .progress-fill[data-w]').forEach(el => {
+    el.style.width = el.dataset.w + '%';
+  });
+}, 300);
+
+// Histogram
+(function() {
+  const counts = [2,18,47,144,245,372,536,690,837,945,1140,1195,901,486,243,78,37,3];
+  const svg = document.getElementById('hist-svg');
+  const W=380, H=115, pad=6;
+  const max = Math.max(...counts);
+  const bw = (W - pad*2) / counts.length;
+  const colors = counts.map((c,i) => {
+    const t = i / (counts.length-1);
+    if (t < 0.3) return '#e74c3c';
+    if (t < 0.5) return '#f39c12';
+    if (t < 0.75) return '#f5c518';
+    return '#27ae60';
+  });
+  let html = '';
+  counts.forEach((c,i) => {
+    const bh = (c/max)*(H-pad);
+    const x = pad + i*bw + 1;
+    const y = H - bh;
+    html += `<rect x="${x}" y="${y}" width="${bw-2}" height="${bh}" fill="${colors[i]}" rx="2" opacity="0.85">
+      <animate attributeName="height" from="0" to="${bh}" dur="1s" begin="${i*0.03}s" fill="freeze"/>
+      <animate attributeName="y" from="${H}" to="${y}" dur="1s" begin="${i*0.03}s" fill="freeze"/>
+    </rect>`;
+  });
+  svg.innerHTML = html;
+})();
+
+// Decade line
+(function() {
+  const data = [{y:'1950',r:6.63},{y:'1960',r:6.44},{y:'1970',r:6.36},{y:'1980',r:5.89},{y:'1990',r:5.28},{y:'2000',r:5.29},{y:'2010',r:5.88},{y:'2020',r:6.39}];
+  const svg = document.getElementById('decade-svg');
+  const W=380, H=125, px=24, py=12;
+  const minR=4.9, maxR=7.3;
+  const pts = data.map((d,i) => ({
+    x: px + (i/(data.length-1))*(W-px*2),
+    y: py + ((maxR-d.r)/(maxR-minR))*(H-py*2),
+    r: d.r, y2: d.y
+  }));
+  const line = pts.map((p,i)=>`${i?'L':'M'}${p.x},${p.y}`).join('');
+  const area = `M${pts[0].x},${H} ` + pts.map(p=>`L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length-1].x},${H} Z`;
+  const dots = pts.map(p=>`
+    <circle cx="${p.x}" cy="${p.y}" r="4" fill="white" stroke="#f5c518" stroke-width="2"/>
+    <text x="${p.x}" y="${p.y-8}" font-size="9" fill="#888" text-anchor="middle">${p.r.toFixed(1)}</text>
+  `).join('');
+  svg.innerHTML = `
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5c518" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#f5c518" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#ga)"/>
+    <path d="${line}" fill="none" stroke="#f5c518" stroke-width="2.5" stroke-linejoin="round"/>
+    ${dots}
+  `;
+})();
+
+// Predictor
+function predict() {
+  const gBase = {Documentary:7.6,Biography:6.67,Drama:6.17,Fantasy:6.25,Crime:6.02,Adventure:6.05,Comedy:5.81,Action:5.7,Horror:5.5,Romance:5.9};
+  const dBonus = {legendary:1.2, established:0, new:-0.8};
+  const cBonus = {A:0.5, B:0, C:-0.4};
+
+  const genre = document.getElementById('p-genre').value;
+  const year  = +document.getElementById('p-year').value || 2015;
+  const votes = +document.getElementById('p-votes').value || 500;
+  const dir   = document.getElementById('p-dir').value;
+  const cast  = document.getElementById('p-cast').value;
+  const dur   = +document.getElementById('p-dur').value || 120;
+
+  let s = (gBase[genre] || 5.84) + dBonus[dir] + cBonus[cast];
+  s += (Math.log1p(votes) - 6) * 0.1;
+  if (year < 1980) s += 0.4; else if (year < 2000) s -= 0.3; else if (year > 2015) s += 0.1;
+  if (dur < 80) s -= 0.15; else if (dur > 160) s += 0.1;
+  s = Math.min(9.8, Math.max(1.5, s));
+
+  const labels = s>=7.5 ? ['Critically Acclaimed','★★★★★'] : s>=6.5 ? ['Well Received','★★★★☆'] : s>=5.5 ? ['Average','★★★☆☆'] : s>=4.5 ? ['Below Average','★★☆☆☆'] : ['Poor','★☆☆☆☆'];
+
+  document.getElementById('r-stars').textContent = labels[1];
+  document.getElementById('r-score').innerHTML = `${s.toFixed(1)}<span> / 10</span>`;
+  document.getElementById('r-label').textContent = labels[0];
+
+  const box = document.getElementById('result-box');
+  box.style.display = 'block';
+  box.style.animation = 'none'; void box.offsetWidth; box.style.animation = 'pop .3s ease';
+}
+</script>
+</body>
+</html>
